@@ -1,6 +1,7 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon.core.task.tracker
+
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.{ Timestamp, PathId }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 
 import scala.collection.{ Iterable, Map }
 
@@ -10,7 +11,6 @@ import scala.collection.{ Iterable, Map }
   * It is an read-only interface. For modification, see
   * * [[TaskCreator]] for creating/removing tasks
   * * [[TaskUpdater]] for updating a task state according to a status update
-  * * [[TaskReconciler]] for querying tasks and removing unknown apps
   */
 trait TaskTracker {
 
@@ -18,7 +18,9 @@ trait TaskTracker {
 
   def getTask(appId: PathId, taskId: String): Option[MarathonTask]
 
-  def getVersion(appId: PathId, taskId: String): Option[Timestamp]
+  def getVersion(appId: PathId, taskId: String): Option[Timestamp] = {
+    getTask(appId, taskId).map(task => Timestamp(task.getVersion))
+  }
 
   def list: Map[PathId, TaskTracker.App]
 
@@ -28,5 +30,5 @@ trait TaskTracker {
 }
 
 object TaskTracker {
-  case class App(appName: PathId, tasks: Iterable[MarathonTask], shutdown: Boolean)
+  case class App(appName: PathId, tasks: Iterable[MarathonTask])
 }

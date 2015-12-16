@@ -1,21 +1,21 @@
 package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{GroupManager, PathId}
-import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService, UnknownAppException}
+import mesosphere.marathon.state.{ GroupManager, PathId }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future

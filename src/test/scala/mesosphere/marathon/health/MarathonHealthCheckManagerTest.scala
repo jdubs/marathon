@@ -7,12 +7,14 @@ import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskUpdater, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
 import mesosphere.marathon.tasks._
 import mesosphere.marathon.test.CaptureEvents
-import mesosphere.marathon.{ MarathonConf, MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec }
+import mesosphere.marathon._
 import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
@@ -31,6 +33,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
   var eventStream: EventStream = _
 
   implicit var system: ActorSystem = _
+  var leadershipModule: LeadershipModule = _
 
   before {
     val metrics = new Metrics(new MetricRegistry)
@@ -41,13 +44,13 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
         """akka.loggers = ["akka.testkit.TestEventListener"]"""
       )
     )
+    leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
 
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
-    val taskTrackerImpl: TaskTrackerImpl = createTaskTracker()
-    taskTracker = taskTrackerImpl
-    taskCreator = taskTrackerImpl
-    taskUpdater = taskTrackerImpl
+    val taskTrackerModule = createTaskTrackerModule(leadershipModule)
+    taskTracker = taskTrackerModule.taskTracker
+    taskCreator = taskTrackerModule.taskCreator
+    taskUpdater = taskTrackerModule.taskUpdater
+
     appRepository = new AppRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
       None,

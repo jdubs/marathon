@@ -6,17 +6,20 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskTracker }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTrackerImpl }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito.{ spy, verify, when }
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
@@ -29,12 +32,14 @@ class TaskStartActorTest
     with Matchers
     with MockitoSugar
     with BeforeAndAfter
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with ScalaFutures {
 
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var launchQueue: LaunchQueue = _
-  var taskTracker: TaskTrackerImpl = _
+  var taskTracker: TaskTracker = _
+  var taskCreator: TaskCreator = _
   var metrics: Metrics = _
 
   before {
@@ -42,7 +47,12 @@ class TaskStartActorTest
     scheduler = mock[SchedulerActions]
     launchQueue = mock[LaunchQueue]
     metrics = new Metrics(new MetricRegistry)
-    taskTracker = spy(MarathonTestHelper.createTaskTracker(store = new InMemoryStore, metrics = metrics))
+    val leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
+      leadershipModule, store = new InMemoryStore, metrics = metrics)
+
+    taskCreator = taskTrackerModule.taskCreator
+    taskTracker = spy(taskTrackerModule.taskTracker)
   }
 
   override protected def afterAll(): Unit = {
@@ -135,7 +145,7 @@ class TaskStartActorTest
       .setId(TaskIdUtil.newTaskId(app.id).getValue)
       .setVersion(Timestamp(1024).toString)
       .build
-    taskTracker.created(app.id, task)
+    taskCreator.created(app.id, task).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -311,7 +321,7 @@ class TaskStartActorTest
       .setId(taskId.getValue)
       .setVersion(Timestamp(1024).toString)
       .build
-    taskTracker.created(app.id, task)
+    taskCreator.created(app.id, task).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
