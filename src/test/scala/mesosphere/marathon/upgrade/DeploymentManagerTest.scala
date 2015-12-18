@@ -14,6 +14,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
@@ -27,18 +28,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class DeploymentManagerTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with FunSuiteLike
     with Matchers
     with BeforeAndAfter
     with BeforeAndAfterAll
     with MockitoSugar
     with ImplicitSender {
-
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-    system.shutdown()
-  }
 
   var driver: SchedulerDriver = _
   var eventBus: EventStream = _

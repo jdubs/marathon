@@ -21,20 +21,14 @@ object AlwaysElectedLeadershipModule extends Mockito {
     forActorsModule(new ActorsModule(ShutdownHooks(), actorSystem))
   }
 
-  def forActorsModule(actorsModule: ActorsModule = new ActorsModule(ShutdownHooks())): LeadershipModule = {
-    val zkClient = mock[ZooKeeperClient]
-    val zooKeeper: ZooKeeper = mock[ZooKeeper]
-    zooKeeper.getState returns ZooKeeper.States.CONNECTED
-    zkClient.get(any) returns zooKeeper
-    val leader = mock[LeadershipAbdication]
-    new AlwaysElectedLeadershipModule(actorsModule.actorRefFactory, zkClient, leader)
-  }
+  private[this] def forActorsModule(actorsModule: ActorsModule = new ActorsModule(ShutdownHooks())): LeadershipModule =
+    {
+      new AlwaysElectedLeadershipModule(actorsModule)
+    }
 }
 
-private class AlwaysElectedLeadershipModule(
-  actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, leader: LeadershipAbdication)
-    extends LeadershipModule(actorRefFactory, zk, leader) {
+private class AlwaysElectedLeadershipModule(actorsModule: ActorsModule) extends LeadershipModule {
   override def startWhenLeader(props: Props, name: String, preparedOnStart: Boolean = true): ActorRef =
-    actorRefFactory.actorOf(props, name)
+    actorsModule.actorRefFactory.actorOf(props, name)
   override def coordinator(): LeadershipCoordinator = ???
 }

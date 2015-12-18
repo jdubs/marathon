@@ -14,6 +14,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.TaskIdUtil
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
@@ -27,7 +28,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 
 class TaskStartActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with FunSuiteLike
     with Matchers
     with MockitoSugar
@@ -58,6 +59,7 @@ class TaskStartActorTest
   override protected def afterAll(): Unit = {
     super.afterAll()
     system.shutdown()
+    system.awaitTermination()
   }
 
   for (

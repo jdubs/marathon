@@ -9,12 +9,14 @@ import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, M
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
-import org.scalatest.Matchers
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.Set
 import scala.concurrent.ExecutionContext
 
-class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultExecutionContext = Some(SameThreadExecutionContext))) with MarathonSpec with Matchers {
+class HealthCheckActorTest
+    extends TestKit(ActorSystem(name = "system", defaultExecutionContext = Some(SameThreadExecutionContext)))
+    with MarathonSpec with Matchers with BeforeAndAfterAll {
 
   // regression test for #934
   test("should not dispatch health checks for staging tasks") {
@@ -82,6 +84,12 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
     verify(driver).killTask(TaskID.newBuilder().setValue(task.getId).build())
 
     verifyNoMoreInteractions(tracker, driver, scheduler)
+  }
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    system.shutdown()
+    system.awaitTermination()
   }
 }
 

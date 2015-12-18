@@ -12,12 +12,13 @@ import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegister
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks._
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.{ MutableMesosLeaderInfo, MesosLeaderInfo, FrameworkIdUtil }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.BeforeAndAfterAll
 
-class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
+class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
@@ -56,10 +57,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
         override def disconnected(): Unit = {}
       }
     )
-  }
-
-  override def afterAll(): Unit = {
-    system.shutdown()
   }
 
   test("Publishes event when registered") {

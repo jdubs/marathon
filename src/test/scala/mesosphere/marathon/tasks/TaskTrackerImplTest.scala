@@ -12,6 +12,7 @@ import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskUpdater, TaskTra
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ PathId, TaskRepository }
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.state.PersistentStore
@@ -21,12 +22,12 @@ import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.collection._
 
-class TaskTrackerImplTest extends TestKit(ActorSystem("System")) with MarathonSpec with Matchers with GivenWhenThen {
-
+class TaskTrackerImplTest extends MarathonActorSupport with MarathonSpec with Matchers with GivenWhenThen
+    with BeforeAndAfterAll {
   val TEST_APP_NAME = "foo".toRootPath
   var taskTracker: TaskTracker = null
   var taskCreator: TaskCreator = null
@@ -42,6 +43,11 @@ class TaskTrackerImplTest extends TestKit(ActorSystem("System")) with MarathonSp
     taskTracker = taskTrackerModule.taskTracker
     taskCreator = taskTrackerModule.taskCreator
     taskUpdater = taskTrackerModule.taskUpdater
+  }
+
+  override protected def afterAll(): Unit = {
+    system.shutdown()
+    system.awaitTermination()
   }
 
   test("SerializeAndDeserialize") {
