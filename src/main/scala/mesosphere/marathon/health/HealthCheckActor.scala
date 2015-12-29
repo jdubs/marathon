@@ -6,7 +6,7 @@ import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ Timestamp, AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.protos.TaskID
 
@@ -17,6 +17,7 @@ class HealthCheckActor(
     marathonScheduler: MarathonScheduler,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
+    appRepository: AppRepository,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
@@ -87,11 +88,15 @@ class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.getTasks(appId).foreach { task =>
-      if (task.getVersion == appVersion && task.hasStartedAt) {
-        log.debug("Dispatching health check job for task [{}]", task.getId)
-        val worker: ActorRef = context.actorOf(workerProps)
-        worker ! HealthCheckJob(task, healthCheck)
+    appRepository.app(appId, Timestamp(appVersion)).foreach { maybeApp =>
+      maybeApp.foreach { app =>
+        taskTracker.getTasks(appId).foreach { task =>
+          if (task.getVersion == appVersion && task.hasStartedAt) {
+            log.debug("Dispatching health check job for task [{}]", task.getId)
+            val worker: ActorRef = context.actorOf(workerProps)
+            worker ! HealthCheckJob(app, task, healthCheck)
+          }
+        }
       }
     }
   }

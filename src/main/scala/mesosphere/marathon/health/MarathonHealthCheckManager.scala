@@ -61,7 +61,7 @@ class MarathonHealthCheckManager @Inject() (
         log.info(s"Adding health check for app [$appId] and version [$appVersion]: [$healthCheck]")
         val ref = system.actorOf(
           Props(classOf[HealthCheckActor],
-            appId, appVersion.toString, driverHolder, scheduler, healthCheck, taskTracker, eventBus))
+            appId, appVersion.toString, driverHolder, scheduler, healthCheck, taskTracker, appRepository, eventBus))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 

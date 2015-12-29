@@ -3,6 +3,7 @@ package mesosphere.marathon.health
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon.health.HealthCheckActorTest.SameThreadExecutionContext
+import mesosphere.marathon.state.{ Timestamp, AppRepository, AppDefinition }
 import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, Protos, MarathonSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
@@ -12,7 +13,7 @@ import org.mockito.Mockito.{ when, verify, verifyNoMoreInteractions }
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Set
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultExecutionContext = Some(SameThreadExecutionContext))) with MarathonSpec with Matchers {
 
@@ -20,8 +21,12 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
   test("should not dispatch health checks for staging tasks") {
     val tracker = mock[TaskTracker]
     val latch = TestLatch(1)
+
     val appId = "test".toPath
     val appVersion = "1"
+    val app = AppDefinition(id = appId)
+    val appRepository: AppRepository = mock[AppRepository]
+    when(appRepository.app(appId, Timestamp(appVersion))).thenReturn(Future.successful(Some(app)))
 
     val task = Protos.MarathonTask
       .newBuilder
@@ -34,7 +39,10 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val actor = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(appId, appVersion, holder, mock[MarathonScheduler], HealthCheck(), tracker, system.eventStream) {
+        new HealthCheckActor(
+          appId, appVersion,
+          holder, mock[MarathonScheduler], HealthCheck(), tracker, appRepository,
+          system.eventStream) {
           override val workerProps = Props {
             latch.countDown()
             new TestActors.EchoActor
@@ -58,6 +66,9 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
 
     val appId = "test".toPath
     val appVersion = "1"
+    val app = AppDefinition(id = appId)
+    val appRepository: AppRepository = mock[AppRepository]
+    when(appRepository.app(appId, Timestamp(appVersion))).thenReturn(Future.successful(Some(app)))
 
     val task = Protos.MarathonTask
       .newBuilder
@@ -71,7 +82,7 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
       Props(
         new HealthCheckActor(
           appId, appVersion,
-          holder, scheduler, healthCheck, tracker,
+          holder, scheduler, healthCheck, tracker, appRepository,
           system.eventStream
         )
       )
